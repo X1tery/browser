@@ -101,7 +101,20 @@ HTMLTagContent tokenizeHTML(std::string source) {
                     tag_attributes[attr_key] = attr_val;
                 }
                 if (is_singleton) {
-                    result.push_back(HTMLTag(tag_name, tag_attributes, {}));
+                    if (tag_attributes.count("alt")) result.push_back(HTMLTag(tag_name, tag_attributes, {"\033[1m" + tag_attributes["alt"]}));
+                    else if (tag_name == "br") result.push_back(HTMLTag(tag_name, tag_attributes, {" "}));
+                    else if (tag_name == "hr") {
+                        std::string hr_str{};
+                        if (TERM_SIZE.ws_col > 8) {
+                            hr_str = "  ";
+                            for (int i = 0; i < TERM_SIZE.ws_col - 4; i++) hr_str.push_back('-');
+                            hr_str.append("  ");
+                        } else {
+                            for (int i = 0; i < TERM_SIZE.ws_col; i++) hr_str.push_back('-');
+                        }
+                        result.push_back(HTMLTag(tag_name, tag_attributes, {hr_str}));
+                    }
+                    else result.push_back(HTMLTag(tag_name, tag_attributes, {}));
                 } else {
                     i++;
                     int j = 0, c = 0;
@@ -146,15 +159,14 @@ std::string tagToStr(std::string tag, HTMLTagAttr attrs) {
     if (attrs.count("italic")) tag = "\033[3m" + tag;
     if (attrs.count("underline")) tag = "\033[4m" + tag;
     if (attrs.count("a")) tag = "\033[4m\033[38;2;0;0;255m" + tag;
-    if (attrs.count("alt")) tag = "\033[1m" + attrs["alt"];
     for (auto& [attr, val] : attrs) {
         if (attr == "align") {
             if (val == "left") continue;
             else if (val == "right") {
-                tag.insert(tag.begin(), TERM_SIZE.ws_col - tag.size() + 4, ' ');
+                if (TERM_SIZE.ws_col > tag.size()) tag.insert(tag.begin(), TERM_SIZE.ws_col - tag.size() + 4, ' ');
                 continue;
             } else if (val == "center") {
-                tag.insert(tag.begin(), (TERM_SIZE.ws_col - tag.size()) / 2 + 4, ' ');
+                if (TERM_SIZE.ws_col > tag.size()) tag.insert(tag.begin(), (TERM_SIZE.ws_col - tag.size()) / 2 + 4, ' ');
                 continue;
             } else if (val == "justify") continue;
         } else if (attr == "bgcolor") {
