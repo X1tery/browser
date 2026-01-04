@@ -60,7 +60,7 @@ HTMLTagContent tokenizeHTML(std::string source) {
                     i += 2;
                     break;
                 }
-                if (source.substr(i, 9) == "<!DOCTYPE") {
+                if (source.substr(i, 9) == "<!DOCTYPE" || source.substr(i, 9) == "<!doctype") {
                     while (i < source.size() - 1 && source[i] != '>') i++;
                     break;
                 }
@@ -154,7 +154,7 @@ HTMLTagContent tokenizeHTML(std::string source) {
 }
 
 std::string tagToStr(std::string tag, HTMLTagAttr attrs) {
-    if (attrs.count("li")) tag = " - " + tag;
+    if (attrs.count("dd")) tag = "\t" + tag;
     if (attrs.count("bold")) tag = "\033[1m" + tag;
     if (attrs.count("italic")) tag = "\033[3m" + tag;
     if (attrs.count("underline")) tag = "\033[4m" + tag;
@@ -173,7 +173,7 @@ std::string tagToStr(std::string tag, HTMLTagAttr attrs) {
             std::string ansi_clr{};
             if (val[0] != '#') val = COLOR_NAMES.at(val);
             ansi_clr = "\033[48;2;" + std::to_string(std::stoi(val.substr(1, 2), nullptr, 16)) + ";" + std::to_string(std::stoi(val.substr(3, 2), nullptr, 16)) + ";" + std::to_string(std::stoi(val.substr(5, 2), nullptr, 16)) + "m";
-            int i = 0;
+            size_t i = 0;
             while (i < tag.size() && std::iswspace(tag[i])) i++;
             tag.insert(tag.begin() + i, ansi_clr.begin(), ansi_clr.end());
             continue;
@@ -181,7 +181,7 @@ std::string tagToStr(std::string tag, HTMLTagAttr attrs) {
             std::string ansi_clr{};
             if (val[0] != '#') val = COLOR_NAMES.at(val);
             ansi_clr = "\033[38;2;" + std::to_string(std::stoi(val.substr(1, 2), nullptr, 16)) + ";" + std::to_string(std::stoi(val.substr(3, 2), nullptr, 16)) + ";" + std::to_string(std::stoi(val.substr(5, 2), nullptr, 16)) + "m";
-            int i = 0;
+            size_t i = 0;
             while (i < tag.size() && std::iswspace(tag[i])) i++;
             tag.insert(tag.begin() + i, ansi_clr.begin(), ansi_clr.end());
             continue;
@@ -194,19 +194,35 @@ std::string tagToStr(std::string tag, HTMLTagAttr attrs) {
 
 std::string parseTokens(HTMLTagContent tokens, HTMLTagAttr attrs = {}) {
     std::string result{};
+    int ol_count = 0;
     for (std::variant<HTMLTag, std::string> tag : tokens) {
         if (tag.index() == 0) {
             HTMLTagAttr new_attrs{attrs};
             std::string tag_name = std::get<HTMLTag>(tag).name;
             if (tag_name.size() >= 2 && tag_name[0] == 'h' && std::isdigit(tag_name[1])) new_attrs["bold"];
-            else if (tag_name == "b" || tag_name == "strong") new_attrs["bold"];
+            else if (tag_name == "b" || tag_name == "strong" || tag_name == "dt") new_attrs["bold"];
             else if (tag_name == "i" || tag_name == "em") new_attrs["italic"];
+            else if (tag_name == "span") {
+                if (*(result.end() - 1) == '\n') result.erase(result.end() - 1);
+                new_attrs["span"];
+            }
             else if (tag_name == "u") new_attrs["underline"];
-            else if (tag_name == "span") new_attrs["span"];
-            else if (tag_name == "li") new_attrs["li"];
             else if (tag_name == "a") new_attrs["a"];
-            std::get<HTMLTag>(tag).attributes.insert(new_attrs.begin(), new_attrs.end());
-            result.append(parseTokens(std::get<HTMLTag>(tag).content, std::get<HTMLTag>(tag).attributes));
+            else if (tag_name == "dd") new_attrs["dd"];
+            else if (tag_name == "ol") new_attrs["ol"];
+            else if (tag_name == "ul") new_attrs["ul"];
+            new_attrs.insert(attrs.begin(), attrs.end());
+            if (tag_name == "li" && attrs.count("ol")) {
+                ol_count++;
+                result.append(" " + std::to_string(ol_count) + ". ");
+                new_attrs.erase("ol");
+            }
+            else if (tag_name == "li" && attrs.count("ul")) {
+                result.append(" * ");
+                new_attrs.erase("ul");
+            }
+            new_attrs.insert(std::get<HTMLTag>(tag).attributes.begin(), std::get<HTMLTag>(tag).attributes.end());
+            result.append(parseTokens(std::get<HTMLTag>(tag).content, new_attrs));
         } else {
             result.append(tagToStr(std::get<std::string>(tag), attrs));
         }

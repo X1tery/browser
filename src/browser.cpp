@@ -8,8 +8,9 @@
 
 int main(int argc, char** argv) {
 	processInput(argc, argv);
-	std::string src = getSrcFromFile(argv[argc - 1]);
 	ioctl(STDOUT_FILENO, TIOCGWINSZ, &TERM_SIZE);
-	std::print("{}", parseHTML(src));
+	std::string response = sendGET(argv[argc - 1]);
+	response = processResponse(response);
+	std::println("{}", parseHTML(response));
 	return EXIT_SUCCESS;
 }
