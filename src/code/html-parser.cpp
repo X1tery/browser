@@ -1,7 +1,9 @@
 #include <html-parser.hpp>
+#include <input-handler.hpp>
 #include <algorithm>
 #include <unistd.h>
 #include <print>
+#include <sstream>
 #include <cwctype>
 
 const std::vector<std::string> SINGLETON_TAGS{
@@ -47,7 +49,7 @@ const std::unordered_map<std::string, std::string> COLOR_NAMES {
 
 winsize TERM_SIZE;
 
-HTMLTag::HTMLTag(std::string n, HTMLTagAttr a, HTMLTagContent c) : name(n), attributes(a), content(c) {};
+HTMLTag::HTMLTag(std::string n, std::unordered_map<std::string, std::string> a, std::vector<std::variant<HTMLTag, std::string>> c) : name(n), attributes(a), content(c) {};
 
 HTMLTagContent tokenizeHTML(std::string source) {
     HTMLTagContent result;
@@ -55,12 +57,12 @@ HTMLTagContent tokenizeHTML(std::string source) {
         switch (source[i]) {
             case '<':
             {
-                if (source.substr(i, 4) == "<!--") {
+                if (source.size() - i > 4 && (source.substr(i, 4) == "<!--")) {
                     while (i < source.size() - 3 && source.substr(i, 3) != "-->") i++;
                     i += 2;
                     break;
                 }
-                if (source.substr(i, 9) == "<!DOCTYPE" || source.substr(i, 9) == "<!doctype") {
+                if (source.size() - i > 9 && (source.substr(i, 9) == "<!DOCTYPE" || source.substr(i, 9) == "<!doctype")) {
                     while (i < source.size() - 1 && source[i] != '>') i++;
                     break;
                 }
@@ -132,7 +134,8 @@ HTMLTagContent tokenizeHTML(std::string source) {
                         }
                         j++;
                     }
-                    result.push_back(HTMLTag(tag_name, tag_attributes, tokenizeHTML(source.substr(i, j))));
+                    if (tag_name == "script" || tag_name == "style") result.push_back(HTMLTag(tag_name, tag_attributes, {source.substr(i, j)}));
+                    else result.push_back(HTMLTag(tag_name, tag_attributes, tokenizeHTML(source.substr(i, j))));
                     i += j + tag_name.size() + 2;
                 }
             }
@@ -211,6 +214,7 @@ std::string parseTokens(HTMLTagContent tokens, HTMLTagAttr attrs = {}) {
             else if (tag_name == "dd") new_attrs["dd"];
             else if (tag_name == "ol") new_attrs["ol"];
             else if (tag_name == "ul") new_attrs["ul"];
+            else if (tag_name == "title"  || tag_name == "style" || tag_name == "script") continue;
             new_attrs.insert(attrs.begin(), attrs.end());
             if (tag_name == "li" && attrs.count("ol")) {
                 ol_count++;
@@ -230,6 +234,17 @@ std::string parseTokens(HTMLTagContent tokens, HTMLTagAttr attrs = {}) {
     return result;
 }
 
-std::string parseHTML(std::string source) {
+std::string parseHTML(std::string source_raw) {
+    if (OPTIONS["-s"].size() || OPTIONS["--source"].size()) return source_raw;
+    std::stringstream stream(source_raw);
+    std::string source, line;
+    while (std::getline(stream, line)) {
+        size_t i;
+        for (i = 0; i != line.size() && std::iswspace(line[i]); i++);
+        if (i == line.size()) continue;
+        size_t j;
+        for (j = line.size(); std::iswspace(line[j - 1]); j--);
+        source.append(line.substr(i, j - i));
+    }
     return parseTokens(tokenizeHTML(source));
 }

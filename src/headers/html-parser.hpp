@@ -9,12 +9,7 @@ extern const std::vector<std::string> SINGLETON_TAGS;
 extern const std::unordered_map<std::string, std::string> COLOR_NAMES;
 extern winsize TERM_SIZE;
 
-class HTMLTag {
-private:
-    //std::unordered_map<std::string, std::string> attributes;
-    //std::vector<std::variant<HTMLTag, std::string>> content;
-    //std::vector<std::variant<HTMLTag, std::string>> tokenize(std::string source);  
-public:
+struct HTMLTag {
     std::unordered_map<std::string, std::string> attributes;
     std::vector<std::variant<HTMLTag, std::string>> content;
     std::string name;

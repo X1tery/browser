@@ -1,6 +1,5 @@
 #include <html-parser.hpp>
 #include <http-client.hpp>
-#include <user-interface.hpp>
 #include <error-handler.hpp>
 #include <input-handler.hpp>
 #include <unistd.h>
@@ -10,7 +9,7 @@ int main(int argc, char** argv) {
 	processInput(argc, argv);
 	ioctl(STDOUT_FILENO, TIOCGWINSZ, &TERM_SIZE);
 	std::string response = sendGET(argv[argc - 1]);
-	response = processResponse(response);
-	std::println("{}", parseHTML(response));
+	std::string body = processResponse(response);
+	std::println("{}", parseHTML(body));
 	return EXIT_SUCCESS;
 }

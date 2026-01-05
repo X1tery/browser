@@ -13,12 +13,10 @@ PRIVATE
     src/browser.cpp
     src/code/html-parser.cpp
     src/code/http-client.cpp
-    src/code/user-interface.cpp
     src/code/error-handler.cpp
     src/code/input-handler.cpp
     src/headers/html-parser.hpp
     src/headers/http-client.hpp
-    src/headers/user-interface.hpp
     src/headers/error-handler.hpp
     src/headers/input-handler.hpp
 )

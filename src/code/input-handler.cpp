@@ -2,34 +2,63 @@
 #include <error-handler.hpp>
 #include <algorithm>
 #include <fstream>
+
 #include <string>
 #include <print>
 #include <format>
 
 const std::string HELP_MSG {"\
 Usage:\n\
+\n\
+{COMMAND} [OPTIONS] {URL/PATH}\n\
+\n\
+Options:\n\
+\n\
 \t-h, --help\n\
-\tShow this message\
+\tShow this message\n\
+\n\
+\t-s , --source\n\
+\tPrint the html source instead of the parsed page\n\
+\n\
+\t-H, --http\n\
+\tInclude the http response received\n\
 "};
 
-std::unordered_map<std::string, bool> OPTIONS {
-	{"-h", false},
-    {"--help", false}
+std::unordered_map<std::string, std::string> OPTIONS {
+	{"-h", ""},
+    {"--help", ""}, 
+    {"-s", ""},
+    {"--source", ""}
+};
+
+const std::vector<std::string> NO_VAL_OPS {
+    "-h",
+    "--help",
+    "-s",
+    "--source",
+    "-H",
+    "--http"
 };
 
 void processInput(int argc, char** argv) {
 for (int i = 1; i < argc - 1; i++) {
         auto pos = OPTIONS.find(argv[i]);
 		if (pos != OPTIONS.end()) {
-		    OPTIONS[argv[i]] = true;
+            if (std::count(NO_VAL_OPS.begin(), NO_VAL_OPS.end(), std::string(argv[i]))) {
+                if (std::string(argv[i]) == "-h" || std::string(argv[i]) == "--help") {
+                    std::println("{}", HELP_MSG);
+                    exit(EXIT_SUCCESS);
+                }
+                OPTIONS[argv[i]] = "1";
+            } else {
+                if (i < argc - 2) OPTIONS[argv[i]] = argv[i + 1];
+                else throw_error(std::format("wrong usage of option \"{}\"", argv[i]));
+                i++;
+            }
         } else {
 			throw_error(std::format("unknown option \"{}\"", argv[i]));
 		}
 	}
-    if (OPTIONS["-h"] || OPTIONS["--help"] || argc < 2 || (argc == 2 && (static_cast<std::string>(argv[1]) == "-h" || static_cast<std::string>(argv[1]) == "--help"))) {
-        std::println("{}", HELP_MSG);
-        exit(EXIT_SUCCESS);
-    }
 }
 
 std::string getSrcFromFile(std::string file_name) {

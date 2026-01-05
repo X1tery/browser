@@ -1,4 +1,5 @@
 #include <error-handler.hpp>
+#include <input-handler.hpp>
 #include <http-client.hpp>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -27,7 +28,7 @@ HttpResponse parseHTTPResponse(std::string source) {
         i++;
     }
     while (i < source.size() && std::iswspace(source[i])) i++;
-    while (i < source.size() && std::iswspace(source[i])) {
+    while (i < source.size() && !std::iswspace(source[i])) {
         std::string header_name{}, header_val{};
         while (i < source.size() && source[i] != ':') {
             header_name.push_back(source[i]);
@@ -39,6 +40,7 @@ HttpResponse parseHTTPResponse(std::string source) {
             header_val.push_back(source[i]);
             i++;
         }
+        response.headers[header_name] = header_val;
         i += 2;
     }
     while (i < source.size() && std::iswspace(source[i])) i++;
@@ -93,29 +95,41 @@ std::string sendGET(std::string site_url) {
         throw_error("failed to connect to " + domain);
     }
     std::string http_request = buildHTTPRequest(domain, location);
-    std::println("-----REQUEST-----\n{}", http_request);
     send(sockfd, http_request.c_str(), strlen(http_request.c_str()), 0);
     std::string http_response{};
-    char response_buff[1028];
+    char response_buff[1];
     int num_read = 0;
     while (true) {
-        num_read = recv(sockfd, response_buff, 1027, 0);
+        num_read = recv(sockfd, response_buff, 1, 0);
         http_response.append(response_buff);
         if (num_read == -1) throw_error("failed to recv");
         else if (num_read == 0) break;
-        std::println("{}", num_read);
-        memset(&response_buff, 0, sizeof(response_buff));
+        memset(response_buff, 0, sizeof(response_buff));
+        if (http_response.size() > 7 && (http_response.substr(http_response.size() - 7) == "</html>" || http_response.substr(http_response.size() - 7) == "</HTML>")) break;
     }
-    std::println("-----RESPONSE-----\n{}", http_response);
     close(sockfd);
     return http_response;
 }
 
 std::string processResponse(std::string response_src) {
     HttpResponse response = parseHTTPResponse(response_src);
-    switch (std::stoi(response.status, nullptr, 10)) { 
-        default:
+    switch (response.status[0]) {
+        case '1':
+            break;
+        case '2':
+            break;
+        case '3':
+            while (response.status[0] == '3') {
+                std::println("redirecting to: {}", response.headers["Location"]);
+                response = parseHTTPResponse(sendGET(response.headers["Location"]));
+            }
+            break;
+        case '4':
+            throw_error(response.status + " " + response.phrase);
+            break;
+        case '5':
+            throw_error(response.status + " " + response.phrase);
             break;
     }
-    return response.body;
+    return (OPTIONS["-H"].size() || OPTIONS["--http"].size()) ? response.src : response.body;
 }
