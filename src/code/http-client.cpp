@@ -99,13 +99,16 @@ std::string sendGET(std::string site_url) {
     std::string http_response{};
     char response_buff[1];
     int num_read = 0;
+    bool is_cont_zero = false;
     while (true) {
         num_read = recv(sockfd, response_buff, 1, 0);
         http_response.append(response_buff);
         if (num_read == -1) throw_error("failed to recv");
         else if (num_read == 0) break;
         memset(response_buff, 0, sizeof(response_buff));
-        if (http_response.size() > 7 && (http_response.substr(http_response.size() - 7) == "</html>" || http_response.substr(http_response.size() - 7) == "</HTML>")) break;
+        if (is_cont_zero && http_response.substr(http_response.size() - 4) == "\r\n\r\n") break;
+        else if (http_response.size() > 7 && (http_response.substr(http_response.size() - 7) == "</html>" || http_response.substr(http_response.size() - 7) == "</HTML>")) break;
+        else if (!is_cont_zero && http_response.size() > 9 && http_response.substr(http_response.size() - 9) == "Length: 0") is_cont_zero = true;
     }
     close(sockfd);
     return http_response;
