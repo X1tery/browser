@@ -21,7 +21,7 @@ options:\n\
 \tprint the html source instead of the parsed page\n\
 \n\
 \t-H, --http\n\
-\tinclude the http response received\n\
+\tinclude the http headers received\n\
 \n\
 made by @X1tery\
 "};
@@ -30,7 +30,9 @@ std::unordered_map<std::string, std::string> OPTIONS {
 	{"-h", ""},
     {"--help", ""}, 
     {"-s", ""},
-    {"--source", ""}
+    {"--source", ""},
+    {"-H", ""},
+    {"--http", ""}
 };
 
 const std::vector<std::string> NO_VAL_OPS {

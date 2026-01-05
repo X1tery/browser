@@ -131,5 +131,13 @@ std::string processResponse(std::string response_src) {
             throw_error(response.status + " " + response.phrase);
             break;
     }
-    return (OPTIONS["-H"].size() || OPTIONS["--http"].size()) ? response.src : response.body;
+    if (OPTIONS["-H"].size() || OPTIONS["--http"].size()) {
+        std::string http_headers{};
+        for (int i = 0; i < response.src.size() - 3; i++) {
+            if (response.src[i] == '\r' && response.src[i + 1] == '\n' && response.src[i + 2] == '\r' && response.src[i + 3] == '\n') break;
+            http_headers.push_back(response.src[i]);
+        }
+        std::println("{}\n", http_headers);
+    }
+    return response.body;
 }
