@@ -8,20 +8,22 @@
 #include <format>
 
 const std::string HELP_MSG {"\
-Usage:\n\
+usage:\n\
 \n\
 {COMMAND} [OPTIONS] {URL/PATH}\n\
 \n\
-Options:\n\
+options:\n\
 \n\
 \t-h, --help\n\
-\tShow this message\n\
+\tshow this message\n\
 \n\
 \t-s , --source\n\
-\tPrint the html source instead of the parsed page\n\
+\tprint the html source instead of the parsed page\n\
 \n\
 \t-H, --http\n\
-\tInclude the http response received\n\
+\tinclude the http response received\n\
+\n\
+made by @X1tery\
 "};
 
 std::unordered_map<std::string, std::string> OPTIONS {
