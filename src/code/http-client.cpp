@@ -97,19 +97,38 @@ std::string sendGET(std::string site_url) {
     std::string http_request = buildHTTPRequest(domain, location);
     send(sockfd, http_request.c_str(), strlen(http_request.c_str()), 0);
     std::string http_response{};
-    char response_buff[1];
-    int num_read = 0;
-    bool is_cont_zero = false;
+    char response_buff[512];
+    int num_read{0};
+    bool is_cont_length{false}, is_encode_chunked{false};
+    int cont_length{0};
+    size_t cont_hdr_start{0}, cont_start{0};
     while (true) {
-        num_read = recv(sockfd, response_buff, 1, 0);
+        num_read = recv(sockfd, response_buff, sizeof(response_buff) - 1, 0);
         http_response.append(response_buff);
         if (num_read == -1) throw_error("failed to recv");
         else if (num_read == 0) break;
+        if (!is_cont_length && !is_encode_chunked && http_response.find("Transfer-Encoding: chunked") != std::string::npos) is_encode_chunked = true;
+        else if (!is_cont_length && !is_encode_chunked && (cont_hdr_start = http_response.find("Content-Length: ")) != std::string::npos) {
+            std::string temp_length{};
+            for (int i = cont_hdr_start + 16; i < http_response.size(); i++) {
+                if (!std::isdigit(http_response[i])) {
+                    is_cont_length = true;
+                    cont_length = std::stoi(temp_length, nullptr, 10);
+                    break;
+                }
+                temp_length.push_back(http_response[i]);
+            }
+        }
+        if (is_cont_length && cont_start == 0) {
+            cont_start = http_response.find("\r\n\r\n");
+            if (cont_start == std::string::npos) cont_start = 0;
+            else cont_start += 4;
+        }
+        if (is_cont_length && http_response.substr(cont_start).size() == cont_length) break;
+        else if (is_encode_chunked && http_response.substr(http_response.size() - 5) == "0\r\n\r\n") break;
         memset(response_buff, 0, sizeof(response_buff));
-        if (is_cont_zero && http_response.substr(http_response.size() - 4) == "\r\n\r\n") break;
-        else if (http_response.size() > 7 && (http_response.substr(http_response.size() - 7) == "</html>" || http_response.substr(http_response.size() - 7) == "</HTML>")) break;
-        else if (!is_cont_zero && http_response.size() > 9 && http_response.substr(http_response.size() - 9) == "Length: 0") is_cont_zero = true;
     }
+    memset(response_buff, 0, sizeof(response_buff));
     close(sockfd);
     return http_response;
 }

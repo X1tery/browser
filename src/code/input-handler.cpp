@@ -45,7 +45,7 @@ const std::vector<std::string> NO_VAL_OPS {
 };
 
 void processInput(int argc, char** argv) {
-if (argc == 2 && (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help")) {
+if (argc == 1 || (argc == 2 && (std::string(argv[1]) == "-h" || std::string(argv[1]) == "--help"))) {
 	std::println("{}", HELP_MSG);
 	exit(EXIT_SUCCESS);
 }
